@@ -1,6 +1,6 @@
 # Milestone 1: one agent, one machine
 
-Proven on 2026-11-23, at commit `5f0da35` on `milestone-1`. An Amp agent (Claude Opus 5.5) with its built-in tools turned off fixed a real bug in a real repository and ran its test suite, then started, checked and stopped a server, using only clankerhands' tools.
+Proven on 2026-11-23 on `milestone-1`: task A at `5f0da35`, and task B at `3f3dac6`. Task A does not touch what changed between the two. An Amp agent (Claude Opus 5.5) with its built-in tools turned off fixed a real bug in a real repository and ran its test suite, then started, checked and stopped a server, using only clankerhands' tools.
 
 ## How the agent was disarmed
 
@@ -51,19 +51,20 @@ Before the fix: `FAILED (errors=9, skipped=1)`. Calls: `read` 1, `edit` 2, `shel
 
 ## Task B: a long-running process
 
-In the same repository, the agent was asked to serve `docs/` on port 8765 with `python3 -m http.server`, check it serves and what the server logged, then stop it and show it gone.
+Run at `3f3dac6`, in a fresh thread whose agent had not seen an earlier run. In the same repository, the agent was asked to serve `docs/` on port 8765 with `python3 -m http.server`, check it serves and what the server logged, then stop it and show it gone. Its calls, apart from three `tool_search` calls that read the hands tools' descriptions, were `code_exec` calling clankerhands:
 
-1. Its first try, `nohup python3 -m http.server 8765 &`, did not survive: clankerhands ends a command's process group when the command ends, and nothing said so.
-2. It read clankerhands' tool description through `hands.shell`, then ran the server in the foreground with `timeout_ms: 2000`: `Serving HTTP on 0.0.0.0 port 8765 ...`, then `[Still running as id 6. ...]`.
-3. `curl -i .../index.rst` through `hands.shell` returned `HTTP/1.0 200 OK`, and `shell_output` on id 6 returned the server's log line, `"GET /index.rst HTTP/1.1" 200 -`.
-4. `shell_output` with `stop: true` ended it. Then `curl` failed with exit 7, `ss` showed nothing on 8765, and no `python3 -m http.server` process was left.
+1. `hands.shell`: `python3 -m http.server 8765 --bind 127.0.0.1`, in `docs/`, with `timeout_ms: 3000`. It answered `(no output)`, then `[Still running as id 1. Call shell_output with id 1 to wait for more output, or with stop: true to stop it.]`
+2. `hands.shell`: `curl -i` for `/` and `/conf.py`, which answered `HTTP/1.0 200 OK` with the directory listing, and `conf.py: 200 9041B`.
+3. `hands.shell_output` on id 1: the server's own log, `"GET / HTTP/1.1" 200 -` and `"GET /conf.py HTTP/1.1" 200 -`.
+4. `hands.shell_output` with `stop: true`: `(no new output)`, then `ended by SIGTERM (stopped on request)`.
+5. `hands.shell`, twice: `curl` failed with exit 7, `ss` showed no listener on 8765, and `ps -eo pid,args | grep -c '[p]ython3 -m http.server'` counted 0.
 
-Calls: `shell` 8, `shell_output` 2. [Thread](https://ampcode.com/threads/T-01a20880-9a71-74df-a62e-039111cc84fd).
+Calls: `shell` 4, `shell_output` 2. [Thread](https://ampcode.com/threads/T-01a20896-7792-7112-b604-139bf4294201).
 
 ## What broke, and what changed
 
-- **`&` and `nohup` are stopped with their command.** The behaviour is kept, since it is what stops commands leaving orphans, and `shell`'s description now says so and says how to keep a server running. A test pins it.
-- **A stop read `ended by a signal (stopped on request): Unknown: ChildProcess.exitCode (bash -c ...)`.** It now reads `ended by SIGTERM (stopped on request)`, and a test pins it.
-- **Amp speaks MCP 2026-07-28,** so the text block of every result arrives quoted and escaped, as effect-actions 0.37.0 sends a string success to that revision. Amp's `code_exec` hands the model `structuredContent`, which is the raw string, so the agent saw raw text. A client that reads text blocks under 2026-07-28 would not, until effect-actions sends a string success raw on every revision.
+A first run of task B, at `5f0da35` ([thread](https://ampcode.com/threads/T-01a20880-9a71-74df-a62e-039111cc84fd)), passed but showed two problems, fixed in `18efadc` before the run above:
 
-Both fixes landed after the runs, in `18efadc`; the runs themselves were not repeated.
+- **`&` and `nohup` are stopped with their command.** The agent's first try, `nohup python3 -m http.server 8765 &`, did not survive its `shell` call. The behaviour is kept, since it is what stops commands leaving orphans, and `shell`'s description now says so and says how to keep a server running; the run above followed it first time. A test pins it.
+- **A stop read `ended by a signal (stopped on request): Unknown: ChildProcess.exitCode (bash -c ...)`.** It now reads `ended by SIGTERM (stopped on request)`, as the run above shows, and a test pins it.
+- **Amp speaks MCP 2026-07-28,** so the text block of every result arrives quoted and escaped, as effect-actions 0.37.0 sends a string success to that revision. Amp's `code_exec` hands the model `structuredContent`, which is the raw string, so the agent saw raw text. A client that reads text blocks under 2026-07-28 would not, until effect-actions sends a string success raw on every revision.
