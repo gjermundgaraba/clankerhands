@@ -26,7 +26,7 @@ Each run was asked to list its tools, read a file holding a secret word, and run
 
 Threads: [without clankerhands](https://ampcode.com/threads/T-01a20879-1ff8-7209-b8ca-028458ef1ad4), [with clankerhands](https://ampcode.com/threads/T-01a20876-1a46-74d2-82e4-25266d6fd433).
 
-What stays on: `Task`, whose own shell is refused, and `code_exec`, which is how Amp calls MCP tools. `code_exec` also reaches Amp's own functions, such as copying a file to another thread, but none of them reads a file's contents or runs a command. So each task run's calls were checked one by one: every call had to be `code_exec` calling a `hands.*` function and nothing else.
+What stays on: `Task`, whose own shell is refused, and `code_exec`, which is how Amp calls MCP tools. `code_exec` also reaches Amp's own functions, such as copying a file to another thread, but none of them reads a file's contents or runs a command. That bound is the runtime's, not a setting: `code_exec` cannot be turned off, because Amp reaches MCP tools through it, and if its runtime ever gained a file system or a process, this configuration would stop disarming the agent without saying so. So each task run's calls were checked one by one: every call had to be `code_exec` calling a `hands.*` function and nothing else.
 
 ## Task A: a real bug
 
