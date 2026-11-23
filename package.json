@@ -1,0 +1,28 @@
+{
+  "name": "clankerhands",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "turbo run typecheck lint format test --continue",
+    "typecheck": "vp check --no-fmt --no-lint vite.config.ts oxlint.config.ts oxfmt.config.ts .amp/plugins",
+    "lint": "vp lint",
+    "format": "vp fmt --check",
+    "prepare": "vp config && effect-tsgo patch --no-typescript --oxlint --tsrs"
+  },
+  "devDependencies": {
+    "@ampcode/plugin": "catalog:",
+    "@clanker-stuff/oxlint-config": "catalog:",
+    "@effect/tsgo": "catalog:",
+    "@types/node": "catalog:",
+    "effect": "catalog:",
+    "turbo": "catalog:",
+    "typescript": "catalog:",
+    "ultracite": "catalog:",
+    "vite": "catalog:",
+    "vite-plus": "catalog:"
+  },
+  "engines": {
+    "node": ">=26.13.1"
+  },
+  "packageManager": "pnpm@12.18.0"
+}

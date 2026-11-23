@@ -1,0 +1,24 @@
+{
+  "name": "@clankerhands/hands",
+  "version": "0.0.0",
+  "private": true,
+  "description": "The clankerhands service: an agent's tools over MCP",
+  "type": "module",
+  "scripts": {
+    "start": "node src/main.ts",
+    "typecheck": "vp check --no-fmt --no-lint",
+    "test": "vp test"
+  },
+  "dependencies": {
+    "@effect/platform-node": "catalog:",
+    "@gjermundgaraba/effect-actions": "catalog:",
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@effect/vitest": "catalog:",
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "vite-plus": "catalog:",
+    "vitest": "catalog:"
+  }
+}
