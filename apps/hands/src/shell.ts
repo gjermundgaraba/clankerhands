@@ -19,6 +19,10 @@ export class UnknownCommand extends Schema.TaggedError<
 
 const maxWait = 600_000;
 
+const shellWait = 120_000;
+
+const followWait = 30_000;
+
 const Wait = (fallback: number) =>
   Schema.optional(
     Schema.Int.check(Schema.isBetween({ minimum: 0, maximum: maxWait }))
@@ -44,7 +48,7 @@ export const Shell = Action.make("shell", {
       description:
         "The directory to run it in. Defaults to the directory clankerhands runs in.",
     }),
-    timeout_ms: Wait(120_000),
+    timeout_ms: Wait(shellWait),
   },
   success: Schema.String,
   error: [WorkdirNotFound, CommandUnavailable],
@@ -60,7 +64,7 @@ export const ShellOutput = Action.make("shell_output", {
   ].join(" "),
   input: {
     id: Schema.Int.annotate({ description: "The id shell gave the command." }),
-    timeout_ms: Wait(30_000),
+    timeout_ms: Wait(followWait),
     stop: Schema.optional(Schema.Boolean).annotate({
       description:
         "Stop the command: SIGTERM, then SIGKILL after 5 seconds. Defaults to false.",
@@ -125,7 +129,7 @@ export const shell = Action.implement(
     const commands = yield* Commands;
 
     return {
-      shell: ({ command, workdir = ".", timeout_ms = 120_000 }) =>
+      shell: ({ command, workdir = ".", timeout_ms = shellWait }) =>
         Effect.gen(function* () {
           const cwd = paths.resolve(workdir);
 
@@ -141,15 +145,12 @@ export const shell = Action.implement(
             });
           }
 
-          const id = yield* commands.start(command, cwd);
-          const progress = yield* commands.follow(id, timeout_ms, false);
-
-          return Option.match(progress, {
-            onNone: () => `[Command ${id} was lost.]`,
-            onSome: (seen) => progressText(seen, true),
-          });
+          return progressText(
+            yield* commands.start(command, cwd, timeout_ms),
+            true
+          );
         }),
-      shell_output: ({ id, timeout_ms = 30_000, stop = false }) =>
+      shell_output: ({ id, timeout_ms = followWait, stop = false }) =>
         Effect.gen(function* () {
           const progress = yield* commands.follow(id, timeout_ms, stop);
 

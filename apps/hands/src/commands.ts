@@ -1,8 +1,8 @@
 import {
   Context,
-  Deferred,
   Effect,
   Exit,
+  Fiber,
   FileSystem,
   Layer,
   Option,
@@ -33,7 +33,7 @@ export interface Progress {
 interface Job {
   readonly log: string;
   readonly chart: Ref.Ref<CommandSnapshot>;
-  readonly ended: Deferred.Deferred<Ending>;
+  readonly exited: Fiber.Fiber<Ending>;
   readonly cursor: Ref.Ref<number>;
   readonly kill: Effect.Effect<void>;
 }
@@ -55,8 +55,9 @@ export class Commands extends Context.Service<
   {
     readonly start: (
       command: string,
-      cwd: string
-    ) => Effect.Effect<number, CommandUnavailable>;
+      cwd: string,
+      waitMs: number
+    ) => Effect.Effect<Progress, CommandUnavailable>;
     readonly follow: (
       id: number,
       waitMs: number,
@@ -79,9 +80,46 @@ export class Commands extends Context.Service<
       const jobs = new Map<number, Job>();
       let count = 0;
 
+      const unread = (job: Job) =>
+        Effect.gen(function* () {
+          const bytes = yield* fs
+            .readFile(job.log)
+            .pipe(Effect.orElseSucceed(() => new Uint8Array()));
+
+          const from = yield* Ref.getAndSet(job.cursor, bytes.length);
+
+          return new TextDecoder().decode(bytes.subarray(from));
+        });
+
+      const progressOf = Effect.fnUntraced(function* (
+        id: number,
+        job: Job,
+        waitMs: number,
+        stop: boolean
+      ) {
+        const before = yield* Ref.get(job.chart);
+
+        if (stop && before.matches("running")) {
+          yield* Ref.update(job.chart, (snapshot) =>
+            advance(snapshot, { type: "stop" })
+          );
+          yield* Effect.forkIn(job.kill, scope);
+        }
+
+        yield* Fiber.await(job.exited).pipe(Effect.timeoutOption(waitMs));
+
+        return {
+          id,
+          log: job.log,
+          output: yield* unread(job),
+          snapshot: yield* Ref.get(job.chart),
+        } satisfies Progress;
+      });
+
       const start = Effect.fn("Commands.start")(function* (
         command: string,
-        cwd: string
+        cwd: string,
+        waitMs: number
       ) {
         count += 1;
 
@@ -109,9 +147,8 @@ export class Commands extends Context.Service<
           );
 
         const chart = yield* Ref.make(started());
-        const ended = yield* Deferred.make<Ending>();
 
-        yield* handle.exitCode.pipe(
+        const exited = yield* handle.exitCode.pipe(
           Effect.map((code): Ending => ({ _tag: "Exited", code })),
           Effect.catchTag("PlatformError", (error) =>
             Effect.succeed<Ending>({
@@ -124,34 +161,24 @@ export class Commands extends Context.Service<
               advance(snapshot, { type: "ended", ending })
             )
           ),
-          Effect.tap((ending) => Deferred.succeed(ended, ending)),
           Effect.ensuring(Scope.close(jobScope, Exit.void)),
           Effect.forkIn(scope)
         );
 
-        jobs.set(id, {
+        const job: Job = {
           log,
           chart,
-          ended,
+          exited,
           cursor: yield* Ref.make(0),
           kill: handle
             .kill({ forceKillAfter: "5 seconds" })
             .pipe(Effect.ignore),
-        });
+        };
 
-        return id;
+        jobs.set(id, job);
+
+        return yield* progressOf(id, job, waitMs, false);
       });
-
-      const unread = (job: Job) =>
-        Effect.gen(function* () {
-          const bytes = yield* fs
-            .readFile(job.log)
-            .pipe(Effect.orElseSucceed(() => new Uint8Array()));
-
-          const from = yield* Ref.getAndSet(job.cursor, bytes.length);
-
-          return new TextDecoder().decode(bytes.subarray(from));
-        });
 
       const follow = Effect.fn("Commands.follow")(function* (
         id: number,
@@ -160,27 +187,9 @@ export class Commands extends Context.Service<
       ) {
         const job = jobs.get(id);
 
-        if (job === undefined) {
-          return Option.none();
-        }
-
-        const before = yield* Ref.get(job.chart);
-
-        if (stop && before.matches("running")) {
-          yield* Ref.update(job.chart, (snapshot) =>
-            advance(snapshot, { type: "stop" })
-          );
-          yield* Effect.forkIn(job.kill, scope);
-        }
-
-        yield* Deferred.await(job.ended).pipe(Effect.timeoutOption(waitMs));
-
-        return Option.some({
-          id,
-          log: job.log,
-          output: yield* unread(job),
-          snapshot: yield* Ref.get(job.chart),
-        });
+        return job === undefined
+          ? Option.none()
+          : Option.some(yield* progressOf(id, job, waitMs, stop));
       });
 
       return Commands.of({ start, follow });

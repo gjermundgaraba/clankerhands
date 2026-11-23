@@ -3,6 +3,7 @@ import { Effect, FileSystem, Path, Schema } from "effect";
 import type { PlatformError } from "effect/PlatformError";
 
 import { bytesOf, head, limits, linesOf } from "./output.ts";
+import type { Cut } from "./output.ts";
 
 export class FileNotFound extends Schema.TaggedError<
   FileNotFound,
@@ -40,7 +41,7 @@ export class FileUnavailable extends Schema.TaggedError<
   { readonly brand: unique symbol }
 >()("FileUnavailable", { path: Schema.String, message: Schema.String }) {}
 
-const FilePath = Schema.String.annotate({
+export const FilePath = Schema.String.annotate({
   description:
     "The file's path, absolute or relative to the directory clankerhands runs in.",
 });
@@ -50,7 +51,6 @@ export const Read = Action.make("read", {
     "Read a text file. Lines come back numbered, as the line number, a tab, then the line.",
     `A page holds at most ${limits.lines} lines or ${limits.bytes / 1024} KB; when a file is longer, the answer ends with the offset to read next.`,
     "The numbers are not part of the file: leave them out of anything you pass to edit.",
-    "To find files or text, use shell with rg, rg --files, or ls.",
   ].join(" "),
   input: {
     path: FilePath,
@@ -71,14 +71,11 @@ export const Read = Action.make("read", {
   caller: Action.Anyone,
 });
 
-interface PageFacts {
+type PageFacts = Cut & {
   readonly path: string;
   readonly offset: number;
   readonly total: number;
-  readonly lines: readonly string[];
-  readonly partial: boolean;
-  readonly keptBytes: number;
-}
+};
 
 const pageText = ({
   path,
@@ -126,9 +123,10 @@ export const read = Action.implement(
     const fs = yield* FileSystem.FileSystem;
     const paths = yield* Path.Path;
 
-    return ({ path: given, offset = 1, limit = limits.lines }) =>
-      Effect.gen(function* () {
-        const path = paths.resolve(given);
+    return ({ path: given, offset = 1, limit = limits.lines }) => {
+      const path = paths.resolve(given);
+
+      return Effect.gen(function* () {
         const info = yield* fs.stat(path);
 
         if (info.type !== "File") {
@@ -170,9 +168,10 @@ export const read = Action.implement(
         return pageText({ path, offset, total: all.length, ...page });
       }).pipe(
         Effect.catchTag("PlatformError", (error) =>
-          Effect.fail(failureOf(paths.resolve(given), error))
+          Effect.fail(failureOf(path, error))
         )
       );
+    };
   })
 );
 
@@ -200,10 +199,10 @@ export const write = Action.implement(
     const fs = yield* FileSystem.FileSystem;
     const paths = yield* Path.Path;
 
-    return ({ path: given, content }) =>
-      Effect.gen(function* () {
-        const path = paths.resolve(given);
+    return ({ path: given, content }) => {
+      const path = paths.resolve(given);
 
+      return Effect.gen(function* () {
         const existing = yield* fs.stat(path).pipe(
           Effect.map((info) => info.type),
           Effect.orElseSucceed(() => "Missing" as const)
@@ -226,8 +225,9 @@ export const write = Action.implement(
         return `${verb} ${path} (${count} ${count === 1 ? "line" : "lines"}).`;
       }).pipe(
         Effect.catchTag("PlatformError", (error) =>
-          Effect.fail(failureOf(paths.resolve(given), error))
+          Effect.fail(failureOf(path, error))
         )
       );
+    };
   })
 );

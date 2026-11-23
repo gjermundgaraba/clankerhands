@@ -1,28 +1,37 @@
-import { NodeServices } from "@effect/platform-node";
 import { assert, describe, it } from "@effect/vitest";
 import * as ActionMcp from "@gjermundgaraba/effect-actions/ActionMcp";
-import * as Testing from "@gjermundgaraba/effect-actions/Testing";
-import { Effect, FileSystem, Layer, Schema } from "effect";
+import { Effect, FileSystem, Schema } from "effect";
 
-import { Commands } from "../src/commands.ts";
 import { Edit, plain, spansOf } from "../src/edit.ts";
-import { routes } from "../src/routes.ts";
-
-const served = Layer.mergeAll(
-  Testing.layer(routes).pipe(
-    Layer.provide(Commands.layer),
-    Layer.provide(NodeServices.layer)
-  ),
-  NodeServices.layer
-);
+import { served } from "./served.ts";
 
 const Text = Schema.String.check(
   Schema.isPattern(/^[a-z \n]*$/u),
   Schema.isMaxLength(40)
 );
 
-const lookalike = (text: string): string =>
-  text.replaceAll(" ", "\u00A0").replaceAll("a", "a");
+const asPlain = (to: string, codes: readonly number[]) =>
+  codes.map((code) => [String.fromCodePoint(code), to] as const);
+
+const range = (from: number, to: number) =>
+  Array.from({ length: to - from + 1 }, (_, index) => from + index);
+
+const lookalikes = new Map([
+  ...asPlain("'", [0x20_18, 0x20_19, 0x20_1a, 0x20_1b, 0x20_32]),
+  ...asPlain('"', [0x20_1c, 0x20_1d, 0x20_1e, 0x20_1f, 0x20_33]),
+  ...asPlain("-", [...range(0x20_10, 0x20_15), 0x22_12]),
+  ...asPlain(" ", [
+    0xa0,
+    ...range(0x20_00, 0x20_0a),
+    0x20_2f,
+    0x20_5f,
+    0x30_00,
+  ]),
+]);
+
+const Mixed = Schema.Array(
+  Schema.Literals([...lookalikes.keys(), "a", "b", "'", '"', "-", " ", "\n"])
+).check(Schema.isMaxLength(60));
 
 describe("matching", () => {
   it.effect.prop(
@@ -56,13 +65,16 @@ describe("matching", () => {
   );
 
   it.effect.prop(
-    "making text plain twice changes nothing more",
-    [Schema.String],
-    ([text]) =>
+    "makes every lookalike quote, dash and space the plain character it looks like",
+    [Mixed],
+    ([chars]) =>
       Effect.sync(() => {
-        const once = plain(lookalike(text)).text;
+        const ascii = chars.map((char) => lookalikes.get(char) ?? char);
 
-        assert.strictEqual(plain(once).text, once);
+        assert.strictEqual(
+          plain(chars.join("")).text,
+          plain(ascii.join("")).text
+        );
       })
   );
 

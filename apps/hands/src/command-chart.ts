@@ -5,7 +5,7 @@ export type Ending =
   | { readonly _tag: "Exited"; readonly code: number }
   | { readonly _tag: "Signalled"; readonly signal: string };
 
-export interface CommandFacts {
+interface CommandFacts {
   readonly ending: Ending | undefined;
   readonly stopRequested: boolean;
 }
@@ -52,6 +52,10 @@ export type CommandSnapshot = SnapshotFrom<typeof command>;
 
 export const started = (): CommandSnapshot => initialTransition(command)[0];
 
+/**
+ * The command's next state. A `stop` after it has ended changes nothing: `follow` reads the
+ * state and then sends `stop` in two steps, so the command can end in between.
+ */
 export const advance = (
   snapshot: CommandSnapshot,
   event: CommandEvent

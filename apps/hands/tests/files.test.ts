@@ -1,20 +1,9 @@
-import { NodeServices } from "@effect/platform-node";
 import { assert, describe, it } from "@effect/vitest";
 import * as ActionMcp from "@gjermundgaraba/effect-actions/ActionMcp";
-import * as Testing from "@gjermundgaraba/effect-actions/Testing";
-import { Effect, FileSystem, Layer, Path } from "effect";
+import { Effect, FileSystem, Path } from "effect";
 
-import { Commands } from "../src/commands.ts";
 import { Read, Write } from "../src/files.ts";
-import { routes } from "../src/routes.ts";
-
-const served = Layer.mergeAll(
-  Testing.layer(routes).pipe(
-    Layer.provide(Commands.layer),
-    Layer.provide(NodeServices.layer)
-  ),
-  NodeServices.layer
-);
+import { served } from "./served.ts";
 
 const encoder = new TextEncoder();
 

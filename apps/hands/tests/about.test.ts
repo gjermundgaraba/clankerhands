@@ -1,14 +1,11 @@
-import { NodeServices } from "@effect/platform-node";
 import { expect, it } from "@effect/vitest";
 import * as ActionMcp from "@gjermundgaraba/effect-actions/ActionMcp";
-import * as Testing from "@gjermundgaraba/effect-actions/Testing";
-import { Effect, Layer } from "effect";
+import { Effect } from "effect";
 import { HttpClient, HttpClientRequest } from "effect/http";
 
 import manifest from "../package.json" with { type: "json" };
 import { GetAbout } from "../src/about.ts";
-import { Commands } from "../src/commands.ts";
-import { routes } from "../src/routes.ts";
+import { served } from "./served.ts";
 
 it.effect("answers its name and version over MCP", () =>
   Effect.gen(function* () {
@@ -18,14 +15,7 @@ it.effect("answers its name and version over MCP", () =>
       name: "clankerhands",
       version: manifest.version,
     });
-  }).pipe(
-    Effect.provide(
-      Testing.layer(routes).pipe(
-        Layer.provide(Commands.layer),
-        Layer.provide(NodeServices.layer)
-      )
-    )
-  )
+  }).pipe(Effect.provide(served))
 );
 
 it.effect("refuses a request a web page sends, which carries an Origin", () =>
@@ -44,12 +34,5 @@ it.effect("refuses a request a web page sends, which carries an Origin", () =>
     );
 
     expect(response.status).toBe(403);
-  }).pipe(
-    Effect.provide(
-      Testing.layer(routes).pipe(
-        Layer.provide(Commands.layer),
-        Layer.provide(NodeServices.layer)
-      )
-    )
-  )
+  }).pipe(Effect.provide(served))
 );

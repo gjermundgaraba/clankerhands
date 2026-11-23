@@ -1,20 +1,9 @@
-import { NodeServices } from "@effect/platform-node";
 import { assert, describe, it } from "@effect/vitest";
 import * as ActionMcp from "@gjermundgaraba/effect-actions/ActionMcp";
-import * as Testing from "@gjermundgaraba/effect-actions/Testing";
-import { Effect, FileSystem, Layer } from "effect";
+import { Effect, FileSystem } from "effect";
 
-import { Commands } from "../src/commands.ts";
-import { routes } from "../src/routes.ts";
 import { Shell, ShellOutput } from "../src/shell.ts";
-
-const served = Layer.mergeAll(
-  Testing.layer(routes).pipe(
-    Layer.provide(Commands.layer),
-    Layer.provide(NodeServices.layer)
-  ),
-  NodeServices.layer
-);
+import { served } from "./served.ts";
 
 describe("shell", () => {
   it.live("merges stdout and stderr in order and ends with the exit code", () =>

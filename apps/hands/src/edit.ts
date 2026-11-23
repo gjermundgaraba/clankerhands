@@ -1,7 +1,13 @@
 import * as Action from "@gjermundgaraba/effect-actions/Action";
 import { Effect, FileSystem, Path, Schema } from "effect";
 
-import { failureOf, FileNotFound, FileUnavailable, NotAFile } from "./files.ts";
+import {
+  failureOf,
+  FileNotFound,
+  FilePath,
+  FileUnavailable,
+  NotAFile,
+} from "./files.ts";
 
 export class NoMatch extends Schema.TaggedError<
   NoMatch,
@@ -34,8 +40,8 @@ const lookalikes: ReadonlyArray<readonly [RegExp, string]> = [
   [/[\u00A0\u2000-\u200A\u202F\u205F\u3000]/gu, " "],
 ];
 
-const plainChar = (char: string): string => {
-  let plainer = char;
+const withoutLookalikes = (text: string): string => {
+  let plainer = text;
 
   for (const [from, to] of lookalikes) {
     plainer = plainer.replace(from, to);
@@ -44,22 +50,23 @@ const plainChar = (char: string): string => {
   return plainer;
 };
 
-/**
- * `text` with lookalike quotes, dashes and spaces made plain, `\r` before a newline dropped, and
- * whitespace at the end of each line dropped; `origin[i]` is where character `i` came from.
- */
-export interface Plain {
+interface Plain {
   readonly text: string;
   readonly origin: readonly number[];
 }
 
+/**
+ * `text` with lookalike quotes, dashes and spaces made plain, `\r` before a newline dropped, and
+ * whitespace at the end of each line dropped; `origin[i]` is where character `i` came from.
+ */
 export const plain = (text: string): Plain => {
+  const flat = withoutLookalikes(text);
   const chars: string[] = [];
   const origin: number[] = [];
   let pending: Array<readonly [string, number]> = [];
 
   for (let index = 0; index < text.length; index += 1) {
-    const char = plainChar(text.charAt(index));
+    const char = flat.charAt(index);
 
     if (char === "\n") {
       pending = [];
@@ -156,8 +163,7 @@ const likeness = (a: string, b: string): number => {
   return (2 * shared) / (left.length + right.length);
 };
 
-/** The lines of `text` most like `needle`'s, with two lines either side, numbered as read shows them. */
-export const closestLines = (text: string, needle: string): string => {
+const closestLines = (text: string, needle: string): string => {
   const lines = text.split("\n");
   const wanted = needle.split("\n");
   let best = 0;
@@ -205,10 +211,7 @@ export const Edit = Action.make("edit", {
     "Leave out the line numbers read shows. To create a file or replace all of it, use write.",
   ].join(" "),
   input: {
-    path: Schema.String.annotate({
-      description:
-        "The file's path, absolute or relative to the directory clankerhands runs in.",
-    }),
+    path: FilePath,
     old_string: Schema.optional(Schema.String).annotate({
       description: "The text to replace, as it appears in the file.",
     }),
@@ -252,9 +255,10 @@ export const edit = Action.implement(
     const fs = yield* FileSystem.FileSystem;
     const paths = yield* Path.Path;
 
-    return (input) =>
-      Effect.gen(function* () {
-        const path = paths.resolve(input.path);
+    return (input) => {
+      const path = paths.resolve(input.path);
+
+      return Effect.gen(function* () {
         const oldString = input.old_string ?? input.old_str;
         const newString = input.new_string ?? input.new_str;
 
@@ -333,8 +337,9 @@ export const edit = Action.implement(
         return `Updated ${path} (${count} ${count === 1 ? "replacement" : "replacements"}).\n${shown}`;
       }).pipe(
         Effect.catchTag("PlatformError", (error) =>
-          Effect.fail(failureOf(paths.resolve(input.path), error))
+          Effect.fail(failureOf(path, error))
         )
       );
+    };
   })
 );
