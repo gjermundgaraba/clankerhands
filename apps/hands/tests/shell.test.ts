@@ -112,7 +112,7 @@ describe("shell", () => {
         timeout_ms: 10_000,
       });
 
-      assert.match(stopped, /stopped on request/u);
+      assert.match(stopped, /\nended by SIGTERM \(stopped on request\)$/u);
 
       const stillRunning = yield* mcp.shell({
         command: `pgrep -fc '[c]${marker.slice(1)}'; true`,
@@ -120,6 +120,25 @@ describe("shell", () => {
 
       assert.strictEqual(stillRunning, "0\nexit code: 0");
     }).pipe(Effect.provide(served))
+  );
+
+  it.live(
+    "stops what a command left running in the background when it ends",
+    () =>
+      Effect.gen(function* () {
+        const mcp = yield* ActionMcp.client([Shell]);
+        const marker = `clankerhands-left-${process.pid}`;
+
+        yield* mcp.shell({
+          command: `(sleep 1000; : ${marker}) & echo started`,
+        });
+
+        const stillRunning = yield* mcp.shell({
+          command: `sleep 0.5; pgrep -fc '[c]${marker.slice(1)}'; true`,
+        });
+
+        assert.strictEqual(stillRunning, "0\nexit code: 0");
+      }).pipe(Effect.provide(served))
   );
 
   it.live("answers an unknown id with its own error", () =>

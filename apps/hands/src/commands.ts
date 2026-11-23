@@ -7,10 +7,12 @@ import {
   Layer,
   Option,
   Path,
+  Predicate,
   Ref,
   Schema,
   Scope,
 } from "effect";
+import type { PlatformError } from "effect/PlatformError";
 import { ChildProcess, ChildProcessSpawner } from "effect/process";
 
 import { advance, started } from "./command-chart.ts";
@@ -35,6 +37,16 @@ interface Job {
   readonly cursor: Ref.Ref<number>;
   readonly kill: Effect.Effect<void>;
 }
+
+const signalOf = (error: PlatformError): string => {
+  const { cause } = error.reason;
+
+  const named = Predicate.isError(cause)
+    ? /signal: '(?<name>\w+)'/u.exec(cause.message)?.groups?.["name"]
+    : undefined;
+
+  return named ?? "a signal";
+};
 
 const wrapper = 'exec >"$0" 2>&1 </dev/null; exec bash -c "$1"';
 
@@ -104,7 +116,7 @@ export class Commands extends Context.Service<
           Effect.catchTag("PlatformError", (error) =>
             Effect.succeed<Ending>({
               _tag: "Signalled",
-              reason: error.reason.message,
+              signal: signalOf(error),
             })
           ),
           Effect.tap((ending) =>

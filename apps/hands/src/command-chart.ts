@@ -3,7 +3,7 @@ import type { InferEvents, SnapshotFrom } from "xstate";
 
 export type Ending =
   | { readonly _tag: "Exited"; readonly code: number }
-  | { readonly _tag: "Signalled"; readonly reason: string };
+  | { readonly _tag: "Signalled"; readonly signal: string };
 
 export interface CommandFacts {
   readonly ending: Ending | undefined;

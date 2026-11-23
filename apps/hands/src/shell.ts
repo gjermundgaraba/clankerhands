@@ -32,7 +32,8 @@ export const Shell = Action.make("shell", {
     "stdin is empty, so a command that waits for input gets none: pass flags such as --yes instead.",
     `Long output keeps its last ${limits.lines} lines or ${limits.bytes / 1024} KB, and the answer names a file holding all of it.`,
     "A command still running when timeout_ms runs out keeps running in the background, and the answer gives its id for shell_output.",
-    "To start a server or watcher and carry on, use timeout_ms 0 or a few seconds.",
+    "When the command ends, anything it left running, such as with & or nohup, is stopped with it.",
+    "To start a server or watcher and carry on, run it in the foreground with timeout_ms 0 or a few seconds, and follow it with shell_output.",
     "Search with rg, find files with rg --files.",
   ].join(" "),
   input: {
@@ -76,7 +77,7 @@ const endingText = (ending: Ending, stopped: boolean): string => {
 
   return ending._tag === "Exited"
     ? `exit code: ${ending.code}${on}`
-    : `ended by a signal${on}: ${ending.reason}`;
+    : `ended by ${ending.signal}${on}`;
 };
 
 const cutNote = (kept: Cut, total: number, log: string): string => {
