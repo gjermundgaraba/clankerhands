@@ -2,11 +2,11 @@
 
 The same tasks as [milestone 1](milestone-1.md), run on another model family and other harnesses, with the same tools.
 
-| Run | Harness | Model | Result |
-| --- | --- | --- | --- |
-| A | Amp | GPT-6.2 Sol | Passed, below |
-| B | Claude Code | Claude | Not run yet: needs a Claude login on the machine |
-| C | Codex | GPT | Not run yet: needs an OpenAI login on the machine |
+| Harness | Model | Result |
+| --- | --- | --- |
+| Amp | GPT-6.2 Sol | Passed, below |
+| Claude Code | Claude | Not run yet: needs a Claude login on the machine |
+| Codex | GPT | Not run yet: needs an OpenAI login on the machine |
 
 ## GPT-6.2 Sol on Amp
 
@@ -24,7 +24,7 @@ The thread set up clankerhands and the task with its normal tools, as in milesto
 { "amp.tools.disable": ["builtin:*"] }
 ```
 
-A server in workspace settings makes Amp ask a person to allow it, in every new orb, even after "Always Allow". A server in user settings needs no approval, so the run needs no one. An `amp.mcpPermissions` allow rule for the URL in workspace settings does not stop the dialog ([probe](https://ampcode.com/threads/T-01a208fb-7d3d-7427-9ed3-e9bd84cdeabd)); that setting allows or blocks servers, and is not trust.
+A server in workspace settings makes Amp ask a person to allow it, in every new orb, even after "Always Allow". A server in user settings needs no approval, so the run needs no one. An `amp.mcpPermissions` allow rule for the URL in workspace settings does not stop the dialog ([probe](https://ampcode.com/threads/T-01a208fb-7d3d-7427-9ed3-e9bd84cdeabd)).
 
 Do not restart the hands server from inside the run, such as `amp orb service restart hands` through `hands.shell`. That command runs in the server's own process group, which the restart stops first, so the server never comes back and the disarmed agent is left with no way to do anything. The 0.37.0 run ended that way.
 
@@ -38,7 +38,7 @@ Amp's GPT mode has its own `apply_patch`, so the check tried to change a file as
 | Run `echo $((6*7))` | `shell_command` and `Task`'s shell: `disabled: settings`. `code_exec` alone: `ReferenceError: exec is not defined` | `hands.shell`: `42` and `exit code: 0` |
 | Change the file | `apply_patch`: `tool "apply_patch" is disabled: settings`. `shell_command`: `disabled: settings`. `code_exec` alone: `ReferenceError: writeFile is not defined` | `hands.edit`: `Updated …/secret.txt (1 replacement).` then `1\tchanged` |
 
-On Amp the disarm rests on settings for every built-in tool except `code_exec`. `code_exec` must stay on, because Amp reaches MCP tools through it, and it is bounded only by what its runtime can do: the `ReferenceError`s above are that runtime, not a policy. If a later `code_exec` could reach a file system or a process, the same settings would stop disarming the agent and nothing would say so. So each call below was checked: every `code_exec` imported `hands` functions, called them and printed the result, and did nothing else.
+On Amp the disarm rests on settings for every built-in tool except `code_exec`, which must stay on to reach MCP tools: the `ReferenceError`s above come from its runtime, not a setting ([milestone 1](milestone-1.md#the-disarm-check) says what that leaves open). So each call below was checked: every `code_exec` imported `hands` functions, called them, printed the result and did nothing else.
 
 ### What Amp hands the model
 
@@ -53,7 +53,7 @@ edit with copied line 1: typeof=string … value="Updated …/quotes.txt (1 repl
 get_about: typeof=object isArray=false value={"name":"clankerhands","version":"0.0.0"}
 ```
 
-The escaping is `JSON.stringify`'s: the strings hold real tabs, quotes and backslashes. A line copied from `read`, without its number, equals the file's line, and `edit` takes it. A declared error reaches the model as its `message`. An answer is never parsed into an object, because each one carries a status or line numbers around its text.
+The escaping is `JSON.stringify`'s: the strings hold real tabs, quotes and backslashes. A line copied from `read`, without its number, equals the file's line, and `edit` takes it. A declared error reaches the model as its `message`. No answer was parsed into an object, and none can be: every answer carries a line-number prefix, a status line or a verb sentence, so none is valid JSON on its own. A new tool that answers with bare text would need the same check. `get_about` is the one tool whose success is a struct, not a string, so it still goes out as `structuredContent` and arrives as an object.
 
 ### Task A: a real bug
 
@@ -78,7 +78,7 @@ Ran 741 tests in 3.633s
 OK (skipped=1)
 ```
 
-So a GPT model works with `edit`, and `apply_patch` stays out. This is one small edit: it shows GPT uses `edit` without friction, not that it never wants a patch across many files. Daily use would show that.
+GPT-6.2 Sol used `edit` without a miss. That was one small edit on one harness, so it does not show that a GPT model never wants a patch across many files; [PLAN.md](../PLAN.md) says when `apply_patch` would come back.
 
 ### Task B: a long-running process
 
