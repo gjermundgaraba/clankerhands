@@ -4,11 +4,15 @@ import * as ActionMcp from "@gjermundgaraba/effect-actions/ActionMcp";
 import * as Testing from "@gjermundgaraba/effect-actions/Testing";
 import { Effect, FileSystem, Layer } from "effect";
 
+import { Commands } from "../src/commands.ts";
 import { routes } from "../src/routes.ts";
-import { Shell } from "../src/shell.ts";
+import { Shell, ShellOutput } from "../src/shell.ts";
 
 const served = Layer.mergeAll(
-  Testing.layer(routes).pipe(Layer.provide(NodeServices.layer)),
+  Testing.layer(routes).pipe(
+    Layer.provide(Commands.layer),
+    Layer.provide(NodeServices.layer)
+  ),
   NodeServices.layer
 );
 
@@ -65,16 +69,65 @@ describe("shell", () => {
       }).pipe(Effect.provide(served))
   );
 
-  it.live("stops a command that outlives timeout_ms", () =>
-    Effect.gen(function* () {
-      const mcp = yield* ActionMcp.client([Shell]);
+  it.live(
+    "leaves a slow command running, then follows it to its exit code",
+    () =>
+      Effect.gen(function* () {
+        const mcp = yield* ActionMcp.client([Shell, ShellOutput]);
 
-      const answer = yield* mcp.shell({
-        command: "echo started; sleep 30",
-        timeout_ms: 300,
+        const first = yield* mcp.shell({
+          command: "echo started; sleep 1; echo done",
+          timeout_ms: 200,
+        });
+
+        const id = Number(/as id (?<id>\d+)\./u.exec(first)?.groups?.["id"]);
+
+        assert.isTrue(first.startsWith("started\n[Still running as id "));
+        assert.strictEqual(
+          yield* mcp.shell_output({ id, timeout_ms: 5000 }),
+          "done\nexit code: 0"
+        );
+        assert.strictEqual(
+          yield* mcp.shell_output({ id }),
+          "(no new output)\nexit code: 0"
+        );
+      }).pipe(Effect.provide(served))
+  );
+
+  it.live("stops a command and everything it started", () =>
+    Effect.gen(function* () {
+      const mcp = yield* ActionMcp.client([Shell, ShellOutput]);
+      const marker = `clankerhands-test-${process.pid}`;
+
+      const first = yield* mcp.shell({
+        command: `bash -c 'sleep 1000; : ${marker}' & sleep 1000; wait`,
+        timeout_ms: 0,
       });
 
-      assert.isTrue(answer.startsWith("started\n[Stopped after 300 ms"));
+      const id = Number(/as id (?<id>\d+)\./u.exec(first)?.groups?.["id"]);
+
+      const stopped = yield* mcp.shell_output({
+        id,
+        stop: true,
+        timeout_ms: 10_000,
+      });
+
+      assert.match(stopped, /stopped on request/u);
+
+      const stillRunning = yield* mcp.shell({
+        command: `pgrep -fc '[c]${marker.slice(1)}'; true`,
+      });
+
+      assert.strictEqual(stillRunning, "0\nexit code: 0");
+    }).pipe(Effect.provide(served))
+  );
+
+  it.live("answers an unknown id with its own error", () =>
+    Effect.gen(function* () {
+      const mcp = yield* ActionMcp.client([ShellOutput]);
+      const error = yield* mcp.shell_output({ id: 9999 }).pipe(Effect.flip);
+
+      assert.strictEqual(error._tag, "UnknownCommand");
     }).pipe(Effect.provide(served))
   );
 

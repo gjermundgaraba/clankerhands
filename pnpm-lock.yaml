@@ -206,6 +206,9 @@ catalogs:
     vitest:
       specifier: 5.1.0
       version: 5.1.0
+    xstate:
+      specifier: 6.0.0-alpha.73
+      version: 6.0.0-alpha.73
 
 overrides:
   vite@*: npm:@voidzero-dev/vite-plus-core@8.3.8000
@@ -257,6 +260,9 @@ importers:
       effect:
         specifier: 'catalog:'
         version: 4.1.5
+      xstate:
+        specifier: 'catalog:'
+        version: 6.0.0-alpha.73
     devDependencies:
       '@effect/vitest':
         specifier: 'catalog:'
@@ -1821,6 +1827,10 @@ packages:
       utf-8-validate:
         optional: true
 
+  xstate@6.0.0-alpha.73:
+    resolution: {integrity: sha512-Ru3g082hzyn2h1TspciGFgHplK35jZl6Sl808cspInc0xx/RsALM8sc3AoQpg2KusApD2HPlX7liaVnSxlMyHw==}
+    hasBin: true
+
   yaml@2.9.1:
     resolution: {integrity: sha512-3NxN8+78OdzbT7C/WjGsyfPAtJaN3FNDsWxv7Y7mcDsT/oOmgW8BpyQQFFBnvZE3j9Y2Sdz1ULFLezL7Eb2yFw==}
     engines: {node: '>= 14.6'}
@@ -1833,10 +1843,12 @@ packages:
   yuku-core@0.19.0:
     resolution: {integrity: sha512-kYK9e1XdfirNhkipzW0wmMcSWcVF/CWnuugodfVYRCUwvoBefweL9HzB96OiKEhsx78V5WbUxbJqlizMX869Qg==}
     engines: {node: '>=14.18.0'}
+    deprecated: 'Yuku is now one package with one core. Use "yuku" instead: https://yuku.fyi/javascript/. Existing installs keep working but get no more fixes.'
 
   yuku-parser@0.19.0:
     resolution: {integrity: sha512-XrBh9ZiQK5mJVRxZBAvD6LwRyAYrK3MFtH3+onyuxFL5hFD44EC3QOmIC1FjTj6H2MMwq46/NAI+NZxLZPZgxg==}
     engines: {node: '>=14.18.0'}
+    deprecated: 'Yuku is now one package with one core. Use "yuku" instead: https://yuku.fyi/javascript/. Existing installs keep working but get no more fixes.'
 
   zod@4.6.7:
     resolution: {integrity: sha512-g8W2D2kU6a8untc053fX1uVBKzM7yqAxW/3zwk83+6RyF2+SKOuV+c0wBDhUwzV1PaGapmZH+rmcUzPf+3CGwg==}
@@ -3008,6 +3020,8 @@ snapshots:
       string-width: 8.3.0
 
   ws@8.23.0: {}
+
+  xstate@6.0.0-alpha.73: {}
 
   yaml@2.9.1: {}
 

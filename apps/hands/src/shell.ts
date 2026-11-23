@@ -1,7 +1,9 @@
 import * as Action from "@gjermundgaraba/effect-actions/Action";
 import { Effect, FileSystem, Option, Path, Schema } from "effect";
-import { ChildProcess, ChildProcessSpawner } from "effect/process";
 
+import type { Ending } from "./command-chart.ts";
+import { CommandUnavailable, Commands } from "./commands.ts";
+import type { Progress } from "./commands.ts";
 import { limits, linesOf, tail } from "./output.ts";
 import type { Cut } from "./output.ts";
 
@@ -10,21 +12,28 @@ export class WorkdirNotFound extends Schema.TaggedError<
   { readonly brand: unique symbol }
 >()("WorkdirNotFound", { workdir: Schema.String, message: Schema.String }) {}
 
-export class ShellUnavailable extends Schema.TaggedError<
-  ShellUnavailable,
+export class UnknownCommand extends Schema.TaggedError<
+  UnknownCommand,
   { readonly brand: unique symbol }
->()("ShellUnavailable", { message: Schema.String }) {}
+>()("UnknownCommand", { id: Schema.Int, message: Schema.String }) {}
 
-const maxTimeout = 600_000;
+const maxWait = 600_000;
 
-const defaultTimeout = 120_000;
+const Wait = (fallback: number) =>
+  Schema.optional(
+    Schema.Int.check(Schema.isBetween({ minimum: 0, maximum: maxWait }))
+  ).annotate({
+    description: `How long to wait, in milliseconds, from 0 to ${maxWait}. Defaults to ${fallback}.`,
+  });
 
 export const Shell = Action.make("shell", {
   description: [
     "Run a bash command and get its output, stdout and stderr merged in order, and its exit code.",
     "stdin is empty, so a command that waits for input gets none: pass flags such as --yes instead.",
     `Long output keeps its last ${limits.lines} lines or ${limits.bytes / 1024} KB, and the answer names a file holding all of it.`,
-    "Search with rg, find files with rg --files, and chain commands with && as usual.",
+    "A command still running when timeout_ms runs out keeps running in the background, and the answer gives its id for shell_output.",
+    "To start a server or watcher and carry on, use timeout_ms 0 or a few seconds.",
+    "Search with rg, find files with rg --files.",
   ].join(" "),
   input: {
     command: Schema.String.annotate({
@@ -34,43 +43,40 @@ export const Shell = Action.make("shell", {
       description:
         "The directory to run it in. Defaults to the directory clankerhands runs in.",
     }),
-    timeout_ms: Schema.optional(
-      Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: maxTimeout }))
-    ).annotate({
-      description: `How long to wait for the command, in milliseconds, at most ${maxTimeout}. Defaults to ${defaultTimeout}.`,
-    }),
+    timeout_ms: Wait(120_000),
   },
   success: Schema.String,
-  error: [WorkdirNotFound, ShellUnavailable],
+  error: [WorkdirNotFound, CommandUnavailable],
   readOnly: false,
   caller: Action.Anyone,
 });
 
-type Ending =
-  | { readonly _tag: "Exited"; readonly code: number }
-  | { readonly _tag: "Signalled"; readonly reason: string }
-  | { readonly _tag: "TimedOut"; readonly afterMs: number };
+export const ShellOutput = Action.make("shell_output", {
+  description: [
+    "Follow a command shell left running in the background: wait for it, get the output it wrote since you last looked, and its exit code once it ends.",
+    "It answers as soon as the command ends, or when timeout_ms runs out.",
+    "Set stop to end the command and everything it started.",
+  ].join(" "),
+  input: {
+    id: Schema.Int.annotate({ description: "The id shell gave the command." }),
+    timeout_ms: Wait(30_000),
+    stop: Schema.optional(Schema.Boolean).annotate({
+      description:
+        "Stop the command: SIGTERM, then SIGKILL after 5 seconds. Defaults to false.",
+    }),
+  },
+  success: Schema.String,
+  error: UnknownCommand,
+  readOnly: false,
+  caller: Action.Anyone,
+});
 
-interface RunFacts {
-  readonly output: string;
-  readonly log: string;
-  readonly ending: Ending;
-}
+const endingText = (ending: Ending, stopped: boolean): string => {
+  const on = stopped ? " (stopped on request)" : "";
 
-const endingText = (ending: Ending): string => {
-  switch (ending._tag) {
-    case "Exited": {
-      return `exit code: ${ending.code}`;
-    }
-
-    case "Signalled": {
-      return `ended by a signal: ${ending.reason}`;
-    }
-
-    case "TimedOut": {
-      return `[Stopped after ${ending.afterMs} ms, when timeout_ms ran out. Run it again with a longer timeout_ms.]`;
-    }
-  }
+  return ending._tag === "Exited"
+    ? `exit code: ${ending.code}${on}`
+    : `ended by a signal${on}: ${ending.reason}`;
 };
 
 const cutNote = (kept: Cut, total: number, log: string): string => {
@@ -85,89 +91,76 @@ const cutNote = (kept: Cut, total: number, log: string): string => {
   return "";
 };
 
-const runText = ({ output, log, ending }: RunFacts): string => {
-  const all = linesOf(output);
-  const kept = tail(all);
-  const body = all.length === 0 ? "(no output)" : kept.lines.join("\n");
+const statusText = ({ id, snapshot }: Progress): string => {
+  const { ending, stopRequested } = snapshot.context;
 
-  return `${cutNote(kept, all.length, log)}${body}\n${endingText(ending)}`;
+  if (ending !== undefined) {
+    return endingText(ending, stopRequested);
+  }
+
+  if (snapshot.matches("stopping")) {
+    return `[Stopping id ${id}. Call shell_output with id ${id} to see it end.]`;
+  }
+
+  return `[Still running as id ${id}. Call shell_output with id ${id} to wait for more output, or with stop: true to stop it.]`;
 };
 
-const wrapper = 'exec >"$0" 2>&1 </dev/null; exec bash -c "$1"';
+const emptyText = (fresh: boolean): string =>
+  fresh ? "(no output)" : "(no new output)";
+
+const progressText = (progress: Progress, fresh: boolean): string => {
+  const all = linesOf(progress.output);
+  const kept = tail(all);
+  const body = all.length === 0 ? emptyText(fresh) : kept.lines.join("\n");
+
+  return `${cutNote(kept, all.length, progress.log)}${body}\n${statusText(progress)}`;
+};
 
 export const shell = Action.implement(
-  Shell,
+  [Shell, ShellOutput],
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
     const paths = yield* Path.Path;
-    const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
-    const logs = yield* fs.makeTempDirectoryScoped({ prefix: "clankerhands-" });
-    let runs = 0;
+    const commands = yield* Commands;
 
-    return ({ command, workdir = ".", timeout_ms = defaultTimeout }) =>
-      Effect.gen(function* () {
-        const cwd = paths.resolve(workdir);
+    return {
+      shell: ({ command, workdir = ".", timeout_ms = 120_000 }) =>
+        Effect.gen(function* () {
+          const cwd = paths.resolve(workdir);
 
-        const isDirectory = yield* fs.stat(cwd).pipe(
-          Effect.map((info) => info.type === "Directory"),
-          Effect.orElseSucceed(() => false)
-        );
+          const isDirectory = yield* fs.stat(cwd).pipe(
+            Effect.map((info) => info.type === "Directory"),
+            Effect.orElseSucceed(() => false)
+          );
 
-        if (!isDirectory) {
-          return yield* new WorkdirNotFound({
-            workdir: cwd,
-            message: `${cwd} is not a directory, so the command did not run.`,
+          if (!isDirectory) {
+            return yield* new WorkdirNotFound({
+              workdir: cwd,
+              message: `${cwd} is not a directory, so the command did not run.`,
+            });
+          }
+
+          const id = yield* commands.start(command, cwd);
+          const progress = yield* commands.follow(id, timeout_ms, false);
+
+          return Option.match(progress, {
+            onNone: () => `[Command ${id} was lost.]`,
+            onSome: (seen) => progressText(seen, true),
           });
-        }
+        }),
+      shell_output: ({ id, timeout_ms = 30_000, stop = false }) =>
+        Effect.gen(function* () {
+          const progress = yield* commands.follow(id, timeout_ms, stop);
 
-        runs += 1;
+          if (Option.isNone(progress)) {
+            return yield* new UnknownCommand({
+              id,
+              message: `No command has id ${id}. shell gives an id when a command is still running at its timeout.`,
+            });
+          }
 
-        const log = paths.join(logs, `${runs}.log`);
-
-        const ending = yield* Effect.scoped(
-          Effect.gen(function* () {
-            const handle = yield* spawner.spawn(
-              ChildProcess.make("bash", ["-c", wrapper, log, command], {
-                cwd,
-                stdin: "ignore",
-                stdout: "ignore",
-                stderr: "ignore",
-              })
-            );
-
-            const exited = yield* handle.exitCode.pipe(
-              Effect.map((code): Ending => ({ _tag: "Exited", code })),
-              Effect.catchTag("PlatformError", (error) =>
-                Effect.succeed<Ending>({
-                  _tag: "Signalled",
-                  reason: error.reason.message,
-                })
-              ),
-              Effect.timeoutOption(timeout_ms)
-            );
-
-            if (Option.isSome(exited)) {
-              return exited.value;
-            }
-
-            yield* handle.kill({ forceKillAfter: "5 seconds" });
-
-            return { _tag: "TimedOut", afterMs: timeout_ms } satisfies Ending;
-          })
-        ).pipe(
-          Effect.mapError(
-            (error) =>
-              new ShellUnavailable({
-                message: `The command could not be run: ${error.reason.message}`,
-              })
-          )
-        );
-
-        const output = yield* fs
-          .readFileString(log)
-          .pipe(Effect.orElseSucceed(() => ""));
-
-        return runText({ output, log, ending });
-      });
+          return progressText(progress.value, false);
+        }),
+    };
   })
 );

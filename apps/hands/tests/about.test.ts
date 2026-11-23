@@ -6,6 +6,7 @@ import { Effect, Layer } from "effect";
 
 import manifest from "../package.json" with { type: "json" };
 import { GetAbout } from "../src/about.ts";
+import { Commands } from "../src/commands.ts";
 import { routes } from "../src/routes.ts";
 
 it.effect("answers its name and version over MCP", () =>
@@ -18,7 +19,10 @@ it.effect("answers its name and version over MCP", () =>
     });
   }).pipe(
     Effect.provide(
-      Testing.layer(routes).pipe(Layer.provide(NodeServices.layer))
+      Testing.layer(routes).pipe(
+        Layer.provide(Commands.layer),
+        Layer.provide(NodeServices.layer)
+      )
     )
   )
 );

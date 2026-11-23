@@ -4,11 +4,15 @@ import * as ActionMcp from "@gjermundgaraba/effect-actions/ActionMcp";
 import * as Testing from "@gjermundgaraba/effect-actions/Testing";
 import { Effect, FileSystem, Layer, Schema } from "effect";
 
+import { Commands } from "../src/commands.ts";
 import { Edit, plain, spansOf } from "../src/edit.ts";
 import { routes } from "../src/routes.ts";
 
 const served = Layer.mergeAll(
-  Testing.layer(routes).pipe(Layer.provide(NodeServices.layer)),
+  Testing.layer(routes).pipe(
+    Layer.provide(Commands.layer),
+    Layer.provide(NodeServices.layer)
+  ),
   NodeServices.layer
 );
 

@@ -8,6 +8,7 @@ import {
 import { Config, Effect, Layer } from "effect";
 import { HttpRouter } from "effect/http";
 
+import { Commands } from "./commands.ts";
 import { routes } from "./routes.ts";
 
 const server = Layer.unwrap(
@@ -20,6 +21,7 @@ const server = Layer.unwrap(
 
     return HttpRouter.serve(routes).pipe(
       Layer.provide(NodeHttpServer.layer(createServer, { host, port })),
+      Layer.provide(Commands.layer),
       Layer.provide(NodeServices.layer)
     );
   })
