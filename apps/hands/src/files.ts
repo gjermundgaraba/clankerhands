@@ -175,3 +175,59 @@ export const read = Action.implement(
       );
   })
 );
+
+export const Write = Action.make("write", {
+  description: [
+    "Write a file whole, creating it and any missing parent directories, or replacing what it held.",
+    "To change part of an existing file, use edit instead.",
+  ].join(" "),
+  input: {
+    path: FilePath,
+    content: Schema.String.annotate({
+      description: "Everything the file should hold.",
+    }),
+  },
+  success: Schema.String,
+  error: [FileNotFound, NotAFile, FileUnavailable],
+  readOnly: false,
+  caller: Action.Anyone,
+  mcp: { destructiveHint: true },
+});
+
+export const write = Action.implement(
+  Write,
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem;
+    const paths = yield* Path.Path;
+
+    return ({ path: given, content }) =>
+      Effect.gen(function* () {
+        const path = paths.resolve(given);
+
+        const existing = yield* fs.stat(path).pipe(
+          Effect.map((info) => info.type),
+          Effect.orElseSucceed(() => "Missing" as const)
+        );
+
+        if (existing !== "Missing" && existing !== "File") {
+          return yield* new NotAFile({
+            path,
+            message: `${path} is a ${existing.toLowerCase()}, so write did not replace it.`,
+          });
+        }
+
+        yield* fs.makeDirectory(paths.dirname(path), { recursive: true });
+        yield* fs.writeFileString(path, content);
+
+        const verb = existing === "Missing" ? "Created" : "Overwrote";
+
+        const count = linesOf(content).length;
+
+        return `${verb} ${path} (${count} ${count === 1 ? "line" : "lines"}).`;
+      }).pipe(
+        Effect.catchTag("PlatformError", (error) =>
+          Effect.fail(failureOf(paths.resolve(given), error))
+        )
+      );
+  })
+);

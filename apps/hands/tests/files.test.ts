@@ -4,7 +4,7 @@ import * as ActionMcp from "@gjermundgaraba/effect-actions/ActionMcp";
 import * as Testing from "@gjermundgaraba/effect-actions/Testing";
 import { Effect, FileSystem, Layer, Path } from "effect";
 
-import { Read } from "../src/files.ts";
+import { Read, Write } from "../src/files.ts";
 import { routes } from "../src/routes.ts";
 
 const served = Layer.mergeAll(
@@ -101,6 +101,33 @@ describe("read", () => {
       assert.strictEqual(yield* tagOf({ path: dir }), "NotAFile");
       assert.strictEqual(yield* tagOf({ path: binary.path }), "BinaryFile");
       assert.strictEqual(yield* tagOf({ path, offset: 3 }), "OffsetPastEnd");
+    }).pipe(Effect.provide(served))
+  );
+});
+
+describe("write", () => {
+  it.effect("creates parent directories, then overwrites, saying which", () =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const dir = yield* fs.makeTempDirectoryScoped();
+      const path = `${dir}/a/b/c.txt`;
+      const mcp = yield* ActionMcp.client([Write]);
+
+      assert.strictEqual(
+        yield* mcp.write({ path, content: "one\ntwo\n" }),
+        `Created ${path} (2 lines).`
+      );
+      assert.strictEqual(
+        yield* mcp.write({ path, content: "three" }),
+        `Overwrote ${path} (1 line).`
+      );
+      assert.strictEqual(yield* fs.readFileString(path), "three");
+
+      const error = yield* mcp
+        .write({ path: dir, content: "x" })
+        .pipe(Effect.flip);
+
+      assert.strictEqual(error._tag, "NotAFile");
     }).pipe(Effect.provide(served))
   );
 });
