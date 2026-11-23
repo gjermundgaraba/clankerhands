@@ -26,7 +26,7 @@ Each run was asked to list its tools, read a file holding a secret word, and run
 
 Threads: [without clankerhands](https://ampcode.com/threads/T-01a20879-1ff8-7209-b8ca-028458ef1ad4), [with clankerhands](https://ampcode.com/threads/T-01a20876-1a46-74d2-82e4-25266d6fd433).
 
-What stays on: `Task`, whose own shell is refused, and `code_exec`, which is how Amp calls MCP tools. `code_exec` also reaches Amp's own functions, such as copying a file to another thread, but none of them reads a file's contents or runs a command. So each task run's calls were checked one by one: every call had to be `code_exec` calling a `hands.*` function and nothing else.
+What stays on: `Task`, whose own shell is refused, and `code_exec`, which is how Amp calls MCP tools. `code_exec` also reaches Amp's own functions, such as copying a file to another thread, but none of them reads a file's contents or runs a command. That bound is the runtime's, not a setting: if the runtime ever gained a file system or a process, this configuration would stop disarming the agent without saying so. So each task run's calls were checked one by one: every call had to be `code_exec` calling a `hands.*` function and nothing else.
 
 ## Task A: a real bug
 
@@ -67,4 +67,4 @@ A first run of task B, at `5f0da35` ([thread](https://ampcode.com/threads/T-01a2
 
 - **`&` and `nohup` are stopped with their command.** The agent's first try, `nohup python3 -m http.server 8765 &`, did not survive its `shell` call. The behaviour is kept, since it is what stops commands leaving orphans, and `shell`'s description now says so and says how to keep a server running; the run above followed it first time. A test pins it.
 - **A stop read `ended by a signal (stopped on request): Unknown: ChildProcess.exitCode (bash -c ...)`.** It now reads `ended by SIGTERM (stopped on request)`, as the run above shows, and a test pins it.
-- **Amp speaks MCP 2026-07-28,** so the text block of every result arrives quoted and escaped, as effect-actions 0.37.0 sends a string success to that revision. Amp's `code_exec` hands the model `structuredContent`, which is the raw string, so the agent saw raw text. A client that reads text blocks under 2026-07-28 would not, until effect-actions sends a string success raw on every revision.
+- **Amp speaks MCP 2026-07-28,** so the text block of every result arrives quoted and escaped, as effect-actions 0.37.0 sends a string success to that revision. Amp's `code_exec` hands the model `structuredContent`, which is the raw string, so the agent saw raw text. A client that reads text blocks under 2026-07-28 would not, until effect-actions sends a string success raw on every revision. 0.38.0 does; see [milestone 2](milestone-2.md#what-amp-hands-the-model).
