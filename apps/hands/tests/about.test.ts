@@ -1,7 +1,8 @@
+import { NodeServices } from "@effect/platform-node";
 import { expect, it } from "@effect/vitest";
 import * as ActionMcp from "@gjermundgaraba/effect-actions/ActionMcp";
 import * as Testing from "@gjermundgaraba/effect-actions/Testing";
-import { Effect } from "effect";
+import { Effect, Layer } from "effect";
 
 import manifest from "../package.json" with { type: "json" };
 import { GetAbout } from "../src/about.ts";
@@ -15,5 +16,9 @@ it.effect("answers its name and version over MCP", () =>
       name: "clankerhands",
       version: manifest.version,
     });
-  }).pipe(Effect.provide(Testing.layer(routes)))
+  }).pipe(
+    Effect.provide(
+      Testing.layer(routes).pipe(Layer.provide(NodeServices.layer))
+    )
+  )
 );

@@ -1,6 +1,10 @@
 import { createServer } from "node:http";
 
-import { NodeHttpServer, NodeRuntime } from "@effect/platform-node";
+import {
+  NodeHttpServer,
+  NodeRuntime,
+  NodeServices,
+} from "@effect/platform-node";
 import { Config, Effect, Layer } from "effect";
 import { HttpRouter } from "effect/http";
 
@@ -15,7 +19,8 @@ const server = Layer.unwrap(
     const port = yield* Config.Port("PORT").pipe(Config.withDefault(4870));
 
     return HttpRouter.serve(routes).pipe(
-      Layer.provide(NodeHttpServer.layer(createServer, { host, port }))
+      Layer.provide(NodeHttpServer.layer(createServer, { host, port })),
+      Layer.provide(NodeServices.layer)
     );
   })
 );
