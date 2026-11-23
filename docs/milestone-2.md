@@ -8,6 +8,8 @@ The same tasks as [milestone 1](milestone-1.md), run on another model family and
 | Claude Code | Claude | Not run yet: needs a Claude login on the machine |
 | Codex | GPT | Not run yet: needs an OpenAI login on the machine |
 
+There is no way to run the other two harnesses without those logins. Amp lists no Claude Code agent for this project, only models: that agent appears only once a Claude subscription is linked, and it runs Claude with Amp's tools, so it would not be a second harness anyway ([Amp's docs](https://ampcode.com/docs/model-selector#claude-code-model-and-effort)). Both runs use the real `claude` and `codex` CLIs, which sign in with their owner's subscription or API key.
+
 ## GPT-6.2 Sol on Amp
 
 Proven on 2026-11-23 at `5614b64`, with effect-actions 0.38.0, in [this thread](https://ampcode.com/threads/T-01a208fe-6157-765d-8e59-b55dbbf3fd64). An earlier run at `d03d5b3`, on effect-actions 0.37.0 ([thread](https://ampcode.com/threads/T-01a208ea-649d-7377-b32a-2ebeb4babfee)), passed the same disarm check and both tasks the same way, with the same two edits.
