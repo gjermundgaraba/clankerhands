@@ -2,9 +2,9 @@
 
 ## Done
 
-An agent uses clankerhands, and nothing else, as its hands for a normal working day on its user's machine, whichever harness or model family it runs on.
+An agent uses clankerhands, and nothing else, as its hands for a normal working day on its user's machine.
 
-- **The same tools for every client.** clankerhands knows nothing about models or harnesses. Claude, GPT and Gemini models do real work with the same tools, through Amp, Claude Code, Codex and Pi.
+- **The same tools for every model.** clankerhands speaks MCP and is not written for any particular model or harness. It is proven on Amp, with Claude and GPT models; other MCP clients are not tested, and what is known to be unobserved is listed in [docs/milestone-2.md](docs/milestone-2.md#not-observed).
 - **It holds up through a day.** Several agents on one machine at once, all working for the same person: that is concurrency, not multi-user, with no accounts, permissions or isolation between them. Background commands are never lost or orphaned, logs do not fill the disk, and an agent that disconnects mid-command can come back and read the result.
 - **What it did can be checked afterwards.** A log of every tool call, for the user to see what their own agents did.
 - **It is safe where it runs,** as the scope says.
@@ -36,14 +36,14 @@ Every cut says what to do next: the next offset, or where the full output is.
 Each ends with an agent doing real work, not only with passing tests.
 
 1. **One agent, one machine.** Proven: an agent with its built-in tools off fixed a real bug and ran its tests, and ran and stopped a server, using only clankerhands. The evidence is in [docs/milestone-1.md](docs/milestone-1.md).
-2. **No agent favoured.** The same kind of task passes, with the same tools, on a second harness and a second model family: Claude Code with Claude, and Codex or Pi with a GPT model. In progress: GPT-6.2 Sol passed both tasks on Amp. The evidence is in [docs/milestone-2.md](docs/milestone-2.md).
+2. **A second model family.** Proven: GPT-6.2 Sol passed the same tasks on Amp, with the same tools. The evidence is in [docs/milestone-2.md](docs/milestone-2.md). A second harness is not planned, by decision.
 3. **Daily use.** The user works with clankerhands, and what that use shows is needed gets built: the tool-call log, log retention, limits on concurrent commands, and maybe interactive stdin and images in `read`.
 
 ## Later
 
 | Item | When |
 | --- | --- |
-| `apply_patch` | Only if a GPT model cannot work with `edit`, on Codex or in daily use, and then for every client. GPT-6.2 Sol could, on Amp |
+| `apply_patch` | Only if daily use shows a model cannot work with `edit`, and then for every client. GPT-6.2 Sol could, on Amp |
 | Interactive stdin, as a small `shell_input` without a PTY | Milestone 3, if use shows it |
 | Images in `read`, through `Action.Image` | Milestone 3 |
 | Read-before-edit tracking | Milestone 3, if use shows lost edits |

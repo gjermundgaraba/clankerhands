@@ -1,12 +1,6 @@
-# Milestone 2: no agent favoured
+# Milestone 2: a second model family
 
-The same tasks as [milestone 1](milestone-1.md), run on another model family and other harnesses, with the same tools.
-
-| Harness | Model | Result |
-| --- | --- | --- |
-| Amp | GPT-6.2 Sol | Passed, below |
-| Claude Code | Claude | Not run yet: needs a Claude login on the machine |
-| Codex | GPT | Not run yet: needs an OpenAI login on the machine |
+The same tasks as [milestone 1](milestone-1.md), which Claude Opus 5.5 did on Amp, run by a GPT model on Amp with the same tools. Runs on another harness, such as Claude Code or Codex, are not planned: a second harness was decided not to be needed. So clankerhands is proven on one MCP client, Amp, with two model families; what that leaves unobserved is [at the end](#not-observed).
 
 ## GPT-6.2 Sol on Amp
 
@@ -88,3 +82,12 @@ Calls: `hands.shell` 3, `hands.shell_output` 2, through 4 `code_exec` calls.
 2. `hands.shell`: `curl` for `/index.rst` piped to `cmp` against the file: `HTTP 200`, and the body matched byte for byte.
 3. `hands.shell_output` on id 8: the server's log, `"GET /index.rst HTTP/1.1" 200 -`.
 4. `hands.shell_output` with `stop: true`: `(no new output)`, then `ended by SIGTERM (stopped on request)`. Then `hands.shell`: `curl` exited 7, nothing listened on 8765, and no `http.server` process was left.
+
+## Not observed
+
+These hold on Amp, or were never exercised there, and nobody has watched another MCP client meet them. The first client pointed at clankerhands after Amp should be checked against each.
+
+- **How a client that reads the text block shows a result.** effect-actions 0.38.0 sends a string success as raw text for exactly such clients, and Amp never shows it, because its `code_exec` hands the model the value directly.
+- **Whether a client gives up on a call before `shell` does.** `shell` waits up to 120 seconds by default and 600 at most; a client with a shorter per-call timeout would drop the answer while the command runs on.
+- **How a client that opens with `initialize` settles the protocol revision.** Amp speaks MCP 2026-07-28; a client that starts a 2025 session, as effect-actions' docs say Codex does, takes another path through the server.
+- **How far the disarm holds elsewhere.** On Amp it rests on settings for every built-in tool except `code_exec`, which stays on and is bounded by its runtime, so a client that can turn every built-in tool off would be a stronger proof than these runs.
