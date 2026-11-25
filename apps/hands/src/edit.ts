@@ -50,19 +50,15 @@ const withoutLookalikes = (text: string): string => {
   return plainer;
 };
 
-interface Plain {
+interface Loosened {
   readonly text: string;
-  readonly origin: readonly number[];
+  readonly sourceIndex: readonly number[];
 }
 
-/**
- * `text` with lookalike quotes, dashes and spaces made plain, `\r` before a newline dropped, and
- * whitespace at the end of each line dropped; `origin[i]` is where character `i` came from.
- */
-export const plain = (text: string): Plain => {
+export const loosen = (text: string): Loosened => {
   const flat = withoutLookalikes(text);
   const chars: string[] = [];
-  const origin: number[] = [];
+  const sourceIndex: number[] = [];
   let pending: Array<readonly [string, number]> = [];
 
   for (let index = 0; index < text.length; index += 1) {
@@ -71,22 +67,22 @@ export const plain = (text: string): Plain => {
     if (char === "\n") {
       pending = [];
       chars.push(char);
-      origin.push(index);
+      sourceIndex.push(index);
     } else if (char === " " || char === "\t" || char === "\r") {
       pending.push([char, index]);
     } else {
       for (const [held, at] of pending) {
         chars.push(held);
-        origin.push(at);
+        sourceIndex.push(at);
       }
 
       pending = [];
       chars.push(char);
-      origin.push(index);
+      sourceIndex.push(index);
     }
   }
 
-  return { text: chars.join(""), origin };
+  return { text: chars.join(""), sourceIndex };
 };
 
 const indexesOf = (text: string, needle: string): readonly number[] => {
@@ -101,8 +97,7 @@ const indexesOf = (text: string, needle: string): readonly number[] => {
   return found;
 };
 
-/** Where `needle` occurs in `text`, as spans of `text`: exactly if it can, else ignoring lookalikes. */
-export const spansOf = (
+export const exactOrLooseSpans = (
   text: string,
   needle: string
 ): ReadonlyArray<readonly [number, number]> => {
@@ -112,8 +107,8 @@ export const spansOf = (
     return exact.map((start) => [start, start + needle.length] as const);
   }
 
-  const haystack = plain(text);
-  const wanted = plain(needle).text;
+  const haystack = loosen(text);
+  const wanted = loosen(needle).text;
 
   if (wanted === "") {
     return [];
@@ -123,8 +118,8 @@ export const spansOf = (
     const end = start + wanted.length - 1;
 
     return [
-      haystack.origin[start] ?? 0,
-      (haystack.origin[end] ?? 0) + 1,
+      haystack.sourceIndex[start] ?? 0,
+      (haystack.sourceIndex[end] ?? 0) + 1,
     ] as const;
   });
 };
@@ -133,7 +128,7 @@ const lineAt = (text: string, offset: number): number =>
   text.slice(0, offset).split("\n").length;
 
 const bigrams = (line: string): readonly string[] => {
-  const flat = plain(line).text.trim();
+  const flat = loosen(line).text.trim();
 
   return Array.from({ length: Math.max(flat.length - 1, 0) }, (_, index) =>
     flat.slice(index, index + 2)
@@ -288,7 +283,7 @@ export const edit = Action.implement(
         }
 
         const text = yield* fs.readFileString(path);
-        const spans = spansOf(text, oldString);
+        const spans = exactOrLooseSpans(text, oldString);
 
         if (spans.length === 0) {
           const closest = closestLines(text, oldString);

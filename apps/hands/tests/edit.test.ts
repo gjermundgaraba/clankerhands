@@ -2,7 +2,7 @@ import { assert, describe, it } from "@effect/vitest";
 import * as ActionMcp from "@gjermundgaraba/effect-actions/ActionMcp";
 import { Effect, FileSystem, Schema } from "effect";
 
-import { Edit, plain, spansOf } from "../src/edit.ts";
+import { Edit, exactOrLooseSpans, loosen } from "../src/edit.ts";
 import { served } from "./served.ts";
 
 const Text = Schema.String.check(
@@ -42,7 +42,7 @@ describe("matching", () => {
         const text = `${before}Q${marker}Q${after}`;
         const needle = `Q${marker}Q`;
 
-        assert.deepStrictEqual(spansOf(text, needle), [
+        assert.deepStrictEqual(exactOrLooseSpans(text, needle), [
           [before.length, before.length + needle.length],
         ]);
       })
@@ -58,7 +58,7 @@ describe("matching", () => {
         const needle = `Q"${word}-${word} 'Q`;
         const start = before.length;
 
-        assert.deepStrictEqual(spansOf(text, needle), [
+        assert.deepStrictEqual(exactOrLooseSpans(text, needle), [
           [start, start + inFile.length + 2],
         ]);
       })
@@ -72,8 +72,8 @@ describe("matching", () => {
         const ascii = chars.map((char) => lookalikes.get(char) ?? char);
 
         assert.strictEqual(
-          plain(chars.join("")).text,
-          plain(ascii.join("")).text
+          loosen(chars.join("")).text,
+          loosen(ascii.join("")).text
         );
       })
   );
@@ -82,7 +82,7 @@ describe("matching", () => {
     Effect.sync(() => {
       const text = "one  \r\ntwo\t\r\nthree";
 
-      assert.deepStrictEqual(spansOf(text, "one\ntwo\nthree"), [
+      assert.deepStrictEqual(exactOrLooseSpans(text, "one\ntwo\nthree"), [
         [0, text.length],
       ]);
     })

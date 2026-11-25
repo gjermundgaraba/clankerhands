@@ -71,32 +71,26 @@ export const Read = Action.make("read", {
   caller: Action.Anyone,
 });
 
-type PageFacts = Cut & {
+interface PageFacts {
   readonly path: string;
   readonly offset: number;
   readonly total: number;
-};
+  readonly page: Cut;
+}
 
-const pageText = ({
-  path,
-  offset,
-  total,
-  lines,
-  partial,
-  keptBytes,
-}: PageFacts): string => {
+const pageText = ({ path, offset, total, page }: PageFacts): string => {
   if (total === 0) {
     return `[${path} is empty.]`;
   }
 
-  const last = offset + lines.length - 1;
-  const body = lines.join("\n");
+  if (page._tag === "LinePart") {
+    const shown = bytesOf(page.part) - bytesOf(`${offset}\t`);
 
-  if (partial) {
-    const prefix = bytesOf(`${last}\t`);
-
-    return `${body}\n\n[Line ${last} is longer than ${limits.bytes / 1024} KB, and this shows its first ${keptBytes - prefix} bytes. Read the rest of it with shell: sed -n '${last}p' '${path}' | tail -c +${keptBytes - prefix + 1}${last < total ? `. Then continue with offset=${last + 1}.` : "."}]`;
+    return `${page.part}\n\n[Line ${offset} is longer than ${limits.bytes / 1024} KB, and this shows its first ${shown} bytes. Read the rest of it with shell: sed -n '${offset}p' '${path}' | tail -c +${shown + 1}${offset < total ? `. Then continue with offset=${offset + 1}.` : "."}]`;
   }
+
+  const last = offset + page.lines.length - 1;
+  const body = page.lines.join("\n");
 
   if (last < total) {
     return `${body}\n\n[Showing lines ${offset}-${last} of ${total}. Use offset=${last + 1} to continue.]`;
@@ -108,7 +102,6 @@ const pageText = ({
 const hasNulInFirst8K = (bytes: Uint8Array): boolean =>
   bytes.subarray(0, 8192).includes(0);
 
-/** The tagged error for a failed file-system call on `path`, written for the model. */
 export const failureOf = (path: string, error: PlatformError) =>
   error.reason._tag === "NotFound"
     ? new FileNotFound({ path, message: `${path} does not exist.` })
@@ -165,7 +158,7 @@ export const read = Action.implement(
           lines: Math.min(limit, limits.lines),
         });
 
-        return pageText({ path, offset, total: all.length, ...page });
+        return pageText({ path, offset, total: all.length, page });
       }).pipe(
         Effect.catchTag("PlatformError", (error) =>
           Effect.fail(failureOf(path, error))

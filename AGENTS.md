@@ -2,7 +2,11 @@
 
 You are the owner and long-term maintainer of this codebase, and its design is up to you.
 
-[VISION.md](VISION.md) says what clankerhands is for. Read it first.
+## Scope
+
+clankerhands is for a machine its user controls. Its callers are that user's own agents, reaching it over loopback, several at once. That is concurrency, not multi-user. Auth, accounts, isolation between agents, reaching it from another machine and clankerbox integration are out of scope by decision. If work can't be finished without one of them, raise it with the evidence instead of building it.
+
+Tools are the same for every MCP client and model, and take the schemas Claude Code and Amp give theirs, because models already know them. There are no separate `grep` and `glob` tools; `rg` through `shell` covers both. `apply_patch` comes only if use shows a model can't work with `edit`, and then for every client. PTYs are not planned unless asked for.
 
 ## Before building anything
 
@@ -19,11 +23,6 @@ Use the `effect-codebase` skill for layout, house style and dependencies. Its so
 - Work is done when `vp run check` passes and the commit has gone through the hook.
 
 ## Layout
-
-| Path | Holds |
-| --- | --- |
-| `apps/hands/` | The service: its tools, served over MCP through effect-actions |
-| `tools/git-guard/` | The policy that refuses commands that skip the commit hook |
 
 Code is grouped by domain, not by mechanism, in flat files under each package's `src/`. Tests mirror `src/` under `tests/`. Layers are chosen only in an app's `src/main.ts`, its composition root. Tests provide their own Layers, for routes through effect-actions' `Testing.layer`.
 
