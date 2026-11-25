@@ -6,7 +6,7 @@ You are the owner and long-term maintainer of this codebase, and its design is u
 
 clankerhands is for a machine its user controls. Its callers are that user's own agents, reaching it over loopback, several at once. That is concurrency, not multi-user. Auth, accounts, isolation between agents, reaching it from another machine and clankerbox integration are out of scope by decision. If work can't be finished without one of them, raise it with the evidence instead of building it.
 
-Tools take the schemas Claude Code and Amp give theirs, because models already know them. Search goes through `shell` as `rg` and `rg --files`, not separate `grep` and `glob` tools. `apply_patch` comes only if use shows a model can't work with `edit`, and then for every client. PTYs are not planned unless asked for.
+Tools are the same for every MCP client and model, and take the schemas Claude Code and Amp give theirs, because models already know them. There are no separate `grep` and `glob` tools; `rg` through `shell` covers both. `apply_patch` comes only if use shows a model can't work with `edit`, and then for every client. PTYs are not planned unless asked for.
 
 ## Before building anything
 
