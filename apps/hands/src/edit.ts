@@ -55,10 +55,6 @@ interface Plain {
   readonly origin: readonly number[];
 }
 
-/**
- * `text` with lookalike quotes, dashes and spaces made plain, `\r` before a newline dropped, and
- * whitespace at the end of each line dropped; `origin[i]` is where character `i` came from.
- */
 export const plain = (text: string): Plain => {
   const flat = withoutLookalikes(text);
   const chars: string[] = [];
@@ -101,7 +97,6 @@ const indexesOf = (text: string, needle: string): readonly number[] => {
   return found;
 };
 
-/** Where `needle` occurs in `text`, as spans of `text`: exactly if it can, else ignoring lookalikes. */
 export const spansOf = (
   text: string,
   needle: string

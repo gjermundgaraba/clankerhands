@@ -1,4 +1,3 @@
-/** What one answer holds at most: whichever of the two limits comes first. */
 export interface Limits {
   readonly lines: number;
   readonly bytes: number;
@@ -6,10 +5,6 @@ export interface Limits {
 
 export const limits: Limits = { lines: 2000, bytes: 50 * 1024 };
 
-/**
- * The lines kept by a cut. `partial` is set when a single line was longer than the byte limit:
- * it is then the only line kept, cut inside, and `keptBytes` says how much of it.
- */
 export interface Cut {
   readonly lines: readonly string[];
   readonly partial: boolean;
@@ -75,7 +70,6 @@ const cut = (
   return { lines: kept, partial: false, keptBytes: used };
 };
 
-/** The first lines that fit, as `read` keeps them. */
 export const head = (lines: readonly string[], within: Limits = limits): Cut =>
   cut(lines, within, (line, budget) => {
     const chars = charsOf(line);
@@ -83,7 +77,6 @@ export const head = (lines: readonly string[], within: Limits = limits): Cut =>
     return chars.slice(0, fitting(chars, budget)).join("");
   });
 
-/** The last lines that fit, in their order, as `shell` keeps them. */
 export const tail = (
   lines: readonly string[],
   within: Limits = limits
@@ -99,7 +92,6 @@ export const tail = (
   return { ...kept, lines: kept.lines.toReversed() };
 };
 
-/** A text's lines, without the empty one after a final newline, and without `\r` endings. */
 export const linesOf = (text: string): readonly string[] => {
   if (text === "") {
     return [];

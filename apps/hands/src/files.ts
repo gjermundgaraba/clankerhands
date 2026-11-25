@@ -108,7 +108,6 @@ const pageText = ({
 const hasNulInFirst8K = (bytes: Uint8Array): boolean =>
   bytes.subarray(0, 8192).includes(0);
 
-/** The tagged error for a failed file-system call on `path`, written for the model. */
 export const failureOf = (path: string, error: PlatformError) =>
   error.reason._tag === "NotFound"
     ? new FileNotFound({ path, message: `${path} does not exist.` })
