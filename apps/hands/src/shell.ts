@@ -119,7 +119,6 @@ const keptText = (kept: Cut): string =>
 const progressText = (progress: Progress, fresh: boolean): string => {
   const all = linesOf(progress.output);
   const kept = tail(all);
-
   const body = all.length === 0 ? emptyText(fresh) : keptText(kept);
 
   return `${cutNote(kept, all.length, progress.log)}${body}\n${statusText(progress)}`;
