@@ -4,7 +4,7 @@ import { Effect, FileSystem, Option, Path, Schema } from "effect";
 import type { Ending } from "./command-chart.ts";
 import { CommandUnavailable, Commands } from "./commands.ts";
 import type { Progress } from "./commands.ts";
-import { limits, linesOf, tail } from "./output.ts";
+import { bytesOf, limits, linesOf, tail } from "./output.ts";
 import type { Cut } from "./output.ts";
 
 export class WorkdirNotFound extends Schema.TaggedError<
@@ -85,8 +85,8 @@ const endingText = (ending: Ending, stopped: boolean): string => {
 };
 
 const cutNote = (kept: Cut, total: number, log: string): string => {
-  if (kept.partial) {
-    return `[The output ends in a line longer than ${limits.bytes / 1024} KB; this shows its last ${kept.keptBytes} bytes. Full output: ${log}]\n`;
+  if (kept._tag === "LinePart") {
+    return `[The output ends in a line longer than ${limits.bytes / 1024} KB; this shows its last ${bytesOf(kept.part)} bytes. Full output: ${log}]\n`;
   }
 
   if (kept.lines.length < total) {
@@ -113,10 +113,14 @@ const statusText = ({ id, snapshot }: Progress): string => {
 const emptyText = (fresh: boolean): string =>
   fresh ? "(no output)" : "(no new output)";
 
+const keptText = (kept: Cut): string =>
+  kept._tag === "LinePart" ? kept.part : kept.lines.join("\n");
+
 const progressText = (progress: Progress, fresh: boolean): string => {
   const all = linesOf(progress.output);
   const kept = tail(all);
-  const body = all.length === 0 ? emptyText(fresh) : kept.lines.join("\n");
+
+  const body = all.length === 0 ? emptyText(fresh) : keptText(kept);
 
   return `${cutNote(kept, all.length, progress.log)}${body}\n${statusText(progress)}`;
 };

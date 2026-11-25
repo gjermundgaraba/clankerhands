@@ -5,11 +5,9 @@ export interface Limits {
 
 export const limits: Limits = { lines: 2000, bytes: 50 * 1024 };
 
-export interface Cut {
-  readonly lines: readonly string[];
-  readonly partial: boolean;
-  readonly keptBytes: number;
-}
+export type Cut =
+  | { readonly _tag: "Lines"; readonly lines: readonly string[] }
+  | { readonly _tag: "LinePart"; readonly part: string };
 
 const encoder = new TextEncoder();
 
@@ -55,9 +53,7 @@ const cut = (
 
     if (used + size > within.bytes) {
       if (kept.length === 0) {
-        const part = edge(line, within.bytes);
-
-        return { lines: [part], partial: true, keptBytes: bytesOf(part) };
+        return { _tag: "LinePart", part: edge(line, within.bytes) };
       }
 
       break;
@@ -67,7 +63,7 @@ const cut = (
     kept.push(line);
   }
 
-  return { lines: kept, partial: false, keptBytes: used };
+  return { _tag: "Lines", lines: kept };
 };
 
 export const head = (lines: readonly string[], within: Limits = limits): Cut =>
@@ -89,7 +85,9 @@ export const tail = (
       .join("");
   });
 
-  return { ...kept, lines: kept.lines.toReversed() };
+  return kept._tag === "Lines"
+    ? { _tag: "Lines", lines: kept.lines.toReversed() }
+    : kept;
 };
 
 export const linesOf = (text: string): readonly string[] => {

@@ -11,27 +11,29 @@ const Within = Schema.Struct({
   bytes: Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 120 })),
 });
 
-const sizeOf = (kept: Cut): number =>
-  kept.lines.reduce((total, line) => total + bytesOf(line) + 1, 0);
+const sizeOf = (lines: readonly string[]): number =>
+  lines.reduce((total, line) => total + bytesOf(line) + 1, 0);
 
 const assertWithin = (kept: Cut, within: Limits) => {
-  assert.isAtMost(kept.lines.length, within.lines);
-
-  if (kept.partial) {
-    assert.strictEqual(kept.lines.length, 1);
-    assert.isAtMost(bytesOf(kept.lines[0] ?? ""), within.bytes);
+  if (kept._tag === "LinePart") {
+    assert.isAtMost(bytesOf(kept.part), within.bytes);
   } else {
-    assert.isAtMost(sizeOf(kept), within.bytes);
+    assert.isAtMost(kept.lines.length, within.lines);
+    assert.isAtMost(sizeOf(kept.lines), within.bytes);
   }
 };
 
-const assertFull = (kept: Cut, next: string | undefined, within: Limits) => {
-  if (kept.partial || next === undefined) {
+const assertFull = (
+  kept: readonly string[],
+  next: string | undefined,
+  within: Limits
+) => {
+  if (next === undefined) {
     return;
   }
 
   const room =
-    kept.lines.length < within.lines &&
+    kept.length < within.lines &&
     sizeOf(kept) + bytesOf(next) + 1 <= within.bytes;
 
   assert.isFalse(room, "a line that fits was left out");
@@ -47,13 +49,12 @@ describe("the cut", () => {
 
         assertWithin(kept, within);
 
-        if (kept.partial) {
-          assert.isTrue(lines[0]?.startsWith(kept.lines[0] ?? ""));
+        if (kept._tag === "LinePart") {
+          assert.isTrue(lines[0]?.startsWith(kept.part));
         } else {
           assert.deepStrictEqual(kept.lines, lines.slice(0, kept.lines.length));
+          assertFull(kept.lines, lines[kept.lines.length], within);
         }
-
-        assertFull(kept, lines[kept.lines.length], within);
       })
   );
 
@@ -66,16 +67,15 @@ describe("the cut", () => {
 
         assertWithin(kept, within);
 
-        if (kept.partial) {
-          assert.isTrue(lines.at(-1)?.endsWith(kept.lines[0] ?? ""));
+        if (kept._tag === "LinePart") {
+          assert.isTrue(lines.at(-1)?.endsWith(kept.part));
         } else {
           assert.deepStrictEqual(
             kept.lines,
             lines.slice(lines.length - kept.lines.length)
           );
+          assertFull(kept.lines, lines.at(-1 - kept.lines.length), within);
         }
-
-        assertFull(kept, lines.at(-1 - kept.lines.length), within);
       })
   );
 
@@ -83,8 +83,7 @@ describe("the cut", () => {
     Effect.sync(() => {
       const kept = head(["ééé"], { lines: 5, bytes: 5 });
 
-      assert.deepStrictEqual(kept.lines, ["éé"]);
-      assert.isTrue(kept.partial);
+      assert.deepStrictEqual(kept, { _tag: "LinePart", part: "éé" });
     })
   );
 });
