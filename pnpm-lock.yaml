@@ -171,14 +171,14 @@ catalogs:
       specifier: 0.5.1
       version: 0.5.1
     '@effect/platform-node':
-      specifier: 4.1.5
-      version: 4.1.5
+      specifier: 4.1.6
+      version: 4.1.6
     '@effect/tsgo':
       specifier: 0.73.2
       version: 0.73.2
     '@effect/vitest':
-      specifier: 4.1.5
-      version: 4.1.5
+      specifier: 4.1.6
+      version: 4.1.6
     '@gjermundgaraba/effect-actions':
       specifier: 0.38.0
       version: 0.38.0
@@ -186,8 +186,8 @@ catalogs:
       specifier: 26.6.6
       version: 26.6.6
     effect:
-      specifier: 4.1.5
-      version: 4.1.5
+      specifier: 4.1.6
+      version: 4.1.6
     turbo:
       specifier: 2.11.13
       version: 2.11.13
@@ -232,7 +232,7 @@ importers:
         version: 26.6.6
       effect:
         specifier: 'catalog:'
-        version: 4.1.5
+        version: 4.1.6
       turbo:
         specifier: 'catalog:'
         version: 2.11.13
@@ -253,20 +253,20 @@ importers:
     dependencies:
       '@effect/platform-node':
         specifier: 'catalog:'
-        version: 4.1.5(effect@4.1.5)(redis@6.3.1)
+        version: 4.1.6(effect@4.1.6)(redis@6.3.1)
       '@gjermundgaraba/effect-actions':
         specifier: 'catalog:'
-        version: 0.38.0(effect@4.1.5)
+        version: 0.38.0(effect@4.1.6)
       effect:
         specifier: 'catalog:'
-        version: 4.1.5
+        version: 4.1.6
       xstate:
         specifier: 'catalog:'
         version: 6.0.0-alpha.73
     devDependencies:
       '@effect/vitest':
         specifier: 'catalog:'
-        version: 4.1.5(effect@4.1.5)(vitest@5.1.0)
+        version: 4.1.6(effect@4.1.6)(vitest@5.1.0)
       '@types/node':
         specifier: 'catalog:'
         version: 26.6.6
@@ -284,7 +284,7 @@ importers:
     dependencies:
       effect:
         specifier: 'catalog:'
-        version: 4.1.5
+        version: 4.1.6
     devDependencies:
       '@types/node':
         specifier: 'catalog:'
@@ -348,17 +348,17 @@ packages:
       ultracite: ^8.1.1
       vite-plus: ^1.5.0
 
-  '@effect/platform-node-shared@4.1.5':
-    resolution: {integrity: sha512-JzlrYe4uKaBFTWihBRXo2pDjkUVB39kQpKdGfXdbp7Co5sKT8hbcjOmdB5pg/WOYESdGTddd3fxD4lwlZELbZQ==}
+  '@effect/platform-node-shared@4.1.6':
+    resolution: {integrity: sha512-RWKHX5TEZet2KC/NlBu5prBkZT30m6h8YTSWfJM0wIw0BNMkfEzCuH6N5HOw8mUudclWp5z1XTzsZ7xg0h+6Qw==}
     engines: {node: '>=22.19.0'}
     peerDependencies:
-      effect: ^4.1.5
+      effect: ^4.1.6
 
-  '@effect/platform-node@4.1.5':
-    resolution: {integrity: sha512-tFnRvxF9EKc3oU17sDHj1JeLP+TL/IkaOEl3IUk2EjgMS0x7AWs0ioUXjdNKLb3Z1LdjVfMf/DxsNh9PW5FFAg==}
+  '@effect/platform-node@4.1.6':
+    resolution: {integrity: sha512-DNHzWIRARCCoK6Ez5MOqJ6H81e5FbQecH8GY41ftJGqATENUOVOLkT1iNgxBt6zPi36iF1EpraBen+MjKUqHpw==}
     engines: {node: '>=22.19.0'}
     peerDependencies:
-      effect: ^4.1.5
+      effect: ^4.1.6
       redis: '>=5.1.0 <7.0.0'
 
   '@effect/tsgo-darwin-arm64@0.73.2':
@@ -400,10 +400,10 @@ packages:
     resolution: {integrity: sha512-eM5ayjlp0fD2l+aL+4O/y9d1LwF1m5in5EdNkOYwLFcXI3kcee8CWP4wr2xTc4L/+KJmS/uaYUGWdOj4G46BDA==}
     hasBin: true
 
-  '@effect/vitest@4.1.5':
-    resolution: {integrity: sha512-18u1013wkJtSelk1ZYLc/5aUnluTQyDfi2hAemkJW1GQ9qXw4mtPSiSf0AXZPhesmGCvG1Dk2C4JYD2sz+R72w==}
+  '@effect/vitest@4.1.6':
+    resolution: {integrity: sha512-Knb13gPhDbtOuNUnPXE/Sl+UvrKFHRATwU2vy+DGQCpjK1yI3oy1feQo1g2X8ZdOdc63sJB7HJXCMNsDy8xYvg==}
     peerDependencies:
-      effect: ^4.1.5
+      effect: ^4.1.6
       vitest: 5.1.0
 
   '@gjermundgaraba/effect-actions@0.38.0':
@@ -1273,8 +1273,8 @@ packages:
   dom-accessibility-api@0.5.16:
     resolution: {integrity: sha512-X7BJ2yElsnOJ30pZF4uIIDfBEVgF4XEBxL9Bxhy6dnrm5hkzqmsWHGTiHqRiITNhMyFLyAiWndIJP7Z1NTteDg==}
 
-  effect@4.1.5:
-    resolution: {integrity: sha512-xyR20KhQI0vg2gD8ILUSQRTTESEYJ0JKdP+QD8J37xbwPTqXRxFM/l0+vUVD9fuSvoYruoTqyt33C4FZv1s4TQ==}
+  effect@4.1.6:
+    resolution: {integrity: sha512-P3CxMsdcSCle/7/FnPILd9GJkNqGtduKam2LX9Xsb8LoOjmeQ9Kmsuh16JwtIthaxLyiTCOzUUt+PZsXIohl+A==}
 
   empathic@2.1.0:
     resolution: {integrity: sha512-AnfC1ATldl49/cvZdLPDjBfrRNwbDO05aibiOtzQu3qtlbJtomNLhF30HEtn/7iBz50dlMECqATo3fG0LrdEgw==}
@@ -1899,19 +1899,19 @@ snapshots:
       ultracite: 8.1.1(oxfmt@0.79.0(vite-plus@1.7.0(@types/node@26.6.6)(@vitest/ui@5.1.0)(typescript@7.0.2)(yaml@2.9.1)))(oxlint@1.94.0(vite-plus@1.7.0(@types/node@26.6.6)(@vitest/ui@5.1.0)(typescript@7.0.2)(yaml@2.9.1)))
       vite-plus: 1.7.0(@types/node@26.6.6)(@vitest/ui@5.1.0)(typescript@7.0.2)(yaml@2.9.1)
 
-  '@effect/platform-node-shared@4.1.5(effect@4.1.5)':
+  '@effect/platform-node-shared@4.1.6(effect@4.1.6)':
     dependencies:
       '@types/ws': 8.18.2
-      effect: 4.1.5
+      effect: 4.1.6
       ws: 8.23.0
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
 
-  '@effect/platform-node@4.1.5(effect@4.1.5)(redis@6.3.1)':
+  '@effect/platform-node@4.1.6(effect@4.1.6)(redis@6.3.1)':
     dependencies:
-      '@effect/platform-node-shared': 4.1.5(effect@4.1.5)
-      effect: 4.1.5
+      '@effect/platform-node-shared': 4.1.6(effect@4.1.6)
+      effect: 4.1.6
       redis: 6.3.1
       undici: 8.13.1
     transitivePeerDependencies:
@@ -1949,14 +1949,14 @@ snapshots:
       '@effect/tsgo-win32-arm64': 0.73.2
       '@effect/tsgo-win32-x64': 0.73.2
 
-  '@effect/vitest@4.1.5(effect@4.1.5)(vitest@5.1.0)':
+  '@effect/vitest@4.1.6(effect@4.1.6)(vitest@5.1.0)':
     dependencies:
-      effect: 4.1.5
+      effect: 4.1.6
       vitest: 5.1.0(@types/node@26.6.6)(@vitest/browser-preview@5.1.0)(@vitest/ui@5.1.0)(@voidzero-dev/vite-plus-core@8.3.8000(@types/node@26.6.6)(typescript@7.0.2)(yaml@2.9.1))
 
-  '@gjermundgaraba/effect-actions@0.38.0(effect@4.1.5)':
+  '@gjermundgaraba/effect-actions@0.38.0(effect@4.1.6)':
     dependencies:
-      effect: 4.1.5
+      effect: 4.1.6
 
   '@jridgewell/resolve-uri@3.1.3': {}
 
@@ -2463,7 +2463,7 @@ snapshots:
 
   dom-accessibility-api@0.5.16: {}
 
-  effect@4.1.5: {}
+  effect@4.1.6: {}
 
   empathic@2.1.0: {}
 
